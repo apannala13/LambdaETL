@@ -5,7 +5,7 @@ Initial architecture:
 
 Batch:
 
-Ingestion from an API using Airflow -> DBT data models -> Snowflake warehouse.
+API ingestion with Airflow -> DBT data models -> Snowflake warehouse.
 
 Stream:
 
