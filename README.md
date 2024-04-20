@@ -1,4 +1,4 @@
-# StreamFlowETL
+# LambdaETL
 Hybrid ETL pipelines (batch/stream) leveraging Airflow and Kafka, based on Lambda architecture.
 
 Initial architecture:
