@@ -9,7 +9,8 @@ API ingestion with Airflow -> DBT data models -> Snowflake warehouse.
 
 Stream:
 
-Websocket -> Kafka Producer -> Flink consumer -> Cassandra DB for writes -> Snowflake for analytics
+Websocket -> Kafka Producer -> Flink consumer -> Cassandra DB for writes
 
 Ochestrated with Docker and Kubernetes.
+
 
