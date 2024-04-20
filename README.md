@@ -2,6 +2,7 @@
 Hybrid ETL pipelines (batch/stream) leveraging Airflow and Kafka, based on Lambda architecture.
 
 Initial architecture:
+
 Batch:
 
 Ingestion from an API using Airflow -> DBT data models -> Snowflake warehouse.
