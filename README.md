@@ -5,12 +5,12 @@ Initial architecture:
 
 Batch:
 
-API ingestion with Airflow -> DBT data models -> Snowflake warehouse.
+API ingestion with Airflow -> DBT data models -> Snowflake warehouse for analysis
 
 Stream:
 
 Websocket -> Kafka Producer -> Flink consumer -> Cassandra DB for writes
 
-Ochestrated with Docker and Kubernetes.
+Workflow will be ochestrated with Docker and Kubernetes.
 
 
