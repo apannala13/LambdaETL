@@ -9,6 +9,7 @@ from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from airflow.operators.dummy import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
 
 default_args = {
     'owner': 'airflow',
@@ -22,10 +23,22 @@ def upload_to_s3(file_name, bucket_name, object_name):
         s3.upload_file(file_name, bucket_name, object_name)
         print("file uploaded successfully")
     except NoCredentialsError:
-        print("error: credentials not available")
+        print("error: creds not available")
     except Exception as e:
-        print(f"error occurred: {e}") 
-
+        raise e
+        
+def load_data_into_snowflake():
+    hook = SnowflakeHook(snowflake_conn_id='snowflake_default')
+    sql = """
+    COPY INTO finnhub_stock_news_tbl
+    FROM @finnhub_stage/all_stocks_data.csv
+    FILE_FORMAT = (TYPE = 'CSV', FIELD_OPTIONALLY_ENCLOSED_BY='"', FIELD_DELIMITER = ',', SKIP_HEADER = 1)
+    """
+    try:
+        hook.run(sql)
+        print("data loaded into table")
+    except Exception as e:
+        raise e 
 
 def api_ingestion(min_id):
     api_token = Variable.get('api_token')
@@ -33,7 +46,7 @@ def api_ingestion(min_id):
         'AAPL', 'MSFT', 'GOOGL','AMZN', 'TSLA', 'FB', 'BRK.A', 'V', 'JPM', 'JNJ', 'WMT', 'PG', 'BAC', 'XOM', 
         'CVX', 'KO', 'PFE', 'NFLX', 'T', 'CSCO', 'NKE', 'LLY',  'BA', 'ORCL', 'INTC',  'PEP',  'MCD', 'ABT', 'BMY', 'DIS'  
     ]
-    combined_df = pd.DataFrame()  
+    combined_df = pd.DataFrame()  #empty df to hold all data from ALL stock tickers
     for category in stock_symbols:
         base_url = 'https://finnhub.io/api/v1/news'
         headers = {"X-Finnhub-Token": api_token}
@@ -50,7 +63,7 @@ def api_ingestion(min_id):
                 df['Symbol'] = category                 
                 combined_df = pd.concat([combined_df, df], ignore_index=True)         
         except Exception as e:
-            raise e ("erorr fetching data")
+            raise e
     if not combined_df.empty:
         combined_df.to_csv('all_stocks_data.csv', index=False, header=True)
         print('saved to csv file')
@@ -68,6 +81,7 @@ with DAG(
     default_args=default_args,
 ) as dag:
 
+    #useful for taskgroup syncing to follow acyclic properties
     sync_start = DummyOperator(task_id='start_sync')
     sync_end = DummyOperator(task_id='end_sync')
 
@@ -88,6 +102,11 @@ with DAG(
             }
         )
 
-        api_ingest_task >> file_to_s3
-        
+        load_snowflake = PythonOperator(
+            task_id='load_data_into_snowflake',
+            python_callable=load_data_into_snowflake
+        )
+
+        api_ingest_task >> file_to_s3 >> load_snowflake
+
     sync_start >> api_ingestion_group >> sync_end
