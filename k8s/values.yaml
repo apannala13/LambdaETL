@@ -1,0 +1,34 @@
+executor: "CeleryExecutor"
+
+config:
+  core:
+    load_examples: "False"
+    load_default_connections: "False"
+    dags_folder: "/opt/airflow/dags"
+
+logging:
+  logging_level: "INFO"
+
+  kubernetes:
+    namespace: "airflow"
+
+  webserver:
+    defaultUser:
+      username: "admin"
+      password: "admin"
+      role: "Admin"
+      email: "admin@airflow.org"
+  service:
+    type: "ClusterIP"
+    externalPort: 8080
+
+postgresql:
+  enabled: true
+  postgresqlUsername: "airflow"
+  postgresqlPassword: "airflow"
+
+redis:
+  enabled: true
+
+
+
