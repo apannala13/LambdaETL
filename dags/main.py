@@ -17,17 +17,19 @@ default_args = {
     'retry_delay': timedelta(minutes=1)
 }
 
-def upload_to_s3(file_name, bucket_name, object_name):
+def upload_to_s3(bucket_name, object_name, **kwargs):
+    ti = kwargs['ti']
+    file_path = ti.xcom_pull(task_ids='api_ingestion_task', key='file_path') #pull file
     s3 = boto3.client('s3')
     try:
-        s3.upload_file(file_name, bucket_name, object_name)
+        s3.upload_file(file_path, bucket_name, object_name)
         print("file uploaded successfully")
     except NoCredentialsError:
         print("error: creds not available")
     except Exception as e:
         raise e
         
-def load_data_into_snowflake():
+def load_data_into_snowflake(**kwargs):
     hook = SnowflakeHook(snowflake_conn_id='snowflake_default')
     sql = """
     COPY INTO finnhub_stock_news_tbl
@@ -40,7 +42,8 @@ def load_data_into_snowflake():
     except Exception as e:
         raise e 
 
-def api_ingestion(min_id):
+def api_ingestion(min_id, **kwargs):
+    ti = kwargs['ti']
     api_token = Variable.get('api_token')
     stock_symbols = [
         'AAPL', 'MSFT', 'GOOGL','AMZN', 'TSLA', 'FB', 'BRK.A', 'V', 'JPM', 'JNJ', 'WMT', 'PG', 'BAC', 'XOM', 
@@ -65,8 +68,10 @@ def api_ingestion(min_id):
         except Exception as e:
             raise e
     if not combined_df.empty:
-        combined_df.to_csv('all_stocks_data.csv', index=False, header=True)
+        file_path = 'all_stocks_data.csv'
+        combined_df.to_csv(file_path, index=False, header=True)
         print('saved to csv file')
+        ti.xcom_push(key = 'file_path', value = file_path) #pass file 
     else:
         print("no data fetched for any stock symbols")
 
@@ -96,7 +101,6 @@ with DAG(
             task_id='upload_to_s3',
             python_callable=upload_to_s3,
             op_kwargs={
-                'file_name': 'all_stocks_data.csv',
                 'bucket_name': Variable.get('s3_bucket'),
                 'object_name': Variable.get('s3_object_name')
             }
