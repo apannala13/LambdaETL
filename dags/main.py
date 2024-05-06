@@ -85,7 +85,7 @@ with DAG(
     tags=['finnhub'],
     default_args=default_args,
 ) as dag:
-
+    #TO DO: add DBT model implementation
     #useful for taskgroup syncing to follow acyclic properties
     sync_start = DummyOperator(task_id='start_sync')
     sync_end = DummyOperator(task_id='end_sync')
